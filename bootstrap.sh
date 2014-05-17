@@ -12,23 +12,36 @@ set_env () {
 	while [ -z "${location}" ]; do
 	        read -p "location: " temp_location
 	        if [ ! -z ${temp_location} ]; then
-	        	location=temp_location
+	        	location=${temp_location}
 	        fi
 	done
 
-	while [ -z "${forwar_to}" ]; do
-	        read -p "forward to" temp_forward_to
+	while [ -z "${forward_to}" ]; do
+	        read -p "forward to: " temp_forward_to
 	        if [ ! -z ${temp_forward_to} ]; then
-	        	forward_to=temp_forward_to
+	        	echo temp_forward_to
+	        	forward_to=${temp_forward_to}
 	        fi
 	done
 
-	save_env
+	build_conf
 }
 
 # ..
 build_conf () {
-	# should this build conf, and then create image? or create base image, and change conf ..
+	awk -v var="\n\tlocation /${location} {\n\t\tproxy_pass ${forward_to};\n\t\tproxy_redirect off;\n\t\tproxy_set_header Host $host;\n\t\tproxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n\t}\n" '
+	/# {{begin}}/{f=1}
+	f {print;print var;f=0;next}
+	1' conf/nginx.conf
+
+	while true; do
+	    read -p $'\n'"add another proxy config? y/n " yn $'\n'
+	    case $yn in
+	        [Yy]* ) set_env; break;;
+	        [Nn]* ) save_env;;
+	        * ) echo "[y]es or [n]o";;
+	    esac
+	done
 }
 
 # ..
