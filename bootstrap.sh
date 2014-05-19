@@ -1,8 +1,11 @@
 #!/bin/bash
 
 cat << EOF
-
-reverse proxy stub
+           _                           
+ _ _  __ _(_)_ _ __ __  ___   _ _ _ __ 
+| ' \/ _\` | | ' \\\ \ / |___| | '_| '_ \\
+|_||_\__, |_|_||_/_\_\       |_| | .__/
+     |___/                       |_| 
 
 EOF
 
@@ -10,7 +13,7 @@ EOF
 
 set_env () {
 	location=''
-	forward_to=''
+	proxy_pass=''
 
 	while [ -z "${location}" ]; do
 	        read -p "location: " temp_location
@@ -19,10 +22,10 @@ set_env () {
 	        fi
 	done
 
-	while [ -z "${forward_to}" ]; do
-	        read -p "forward to: " temp_forward_to
-	        if [ ! -z ${temp_forward_to} ]; then
-	        	forward_to=${temp_forward_to}
+	while [ -z "${proxy_pass}" ]; do
+	        read -p "proxy pass: " temp_proxy_pass
+	        if [ ! -z ${temp_proxy_pass} ]; then
+	        	proxy_pass=${temp_proxy_pass}
 	        fi
 	done
 
@@ -32,7 +35,7 @@ set_env () {
 # ..
 
 build_conf () {
-	conf="$(awk -v var="\n\t\tlocation /${location} {\n\t\t\tproxy_pass ${forward_to};\n\t\t\tproxy_redirect off;\n\t\t\tproxy_set_header Host \$host;\n\t\t\tproxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;\n\t\t}\n" '
+	conf="$(awk -v var="\n\t\tlocation /${location} {\n\t\t\tproxy_pass ${proxy_pass};\n\t\t\tproxy_redirect off;\n\t\t\tproxy_set_header Host \$host;\n\t\t\tproxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;\n\t\t}\n" '
 	/# {{begin}}/{f=1}
 	f {print;print var;f=0;next}
 	1' conf/nginx.conf)"
@@ -65,8 +68,12 @@ save_env () {
 # ..
 
 build_image_start_container () {
+	local conf_dir=/var/docker/nginx-rp/etc/nginx/sites-enabled
+
+	mkdir -p ${conf_dir} &&
+	mv conf/nginx.conf ${conf_dir} &&
 	docker.io build -t dusty/nginx-rp github.com/clarkda/docker-nginx-rp.git &&
-	docker.io run -d -e ZNC_USER=${znc_user} -e ZNC_PASS=${znc_pass} -e IRC_SERVER=${irc_server} -e IRC_PORT=${irc_port} -p 6667:6667 -u znc dusty/nginx-rp
+	docker.io run -d -p 80:80 dusty/nginx-rp
 }
 
 # ..
